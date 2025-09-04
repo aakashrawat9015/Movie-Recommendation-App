@@ -1,21 +1,13 @@
 import { useDebounce } from 'react-use';
 import { useState, useEffect } from 'react';
 import logo from './assets/hero.png';
-import Search from './components/Search';
-import MovieCard from './components/MovieCard';
+import Search from './components/SearchMovie/Search';
+import MovieCard from './components/MovieCard/MovieCard';
+import MovieDetails from './components/MovieDetails/MovieDetails';
 import { getTrendingSearches, updateSearchCount } from './appwrite';
+import { fetchMovies, fetchMovieDetails } from './api/tmdb';
 
-const API_BASE_URL = 'https://api.themoviedb.org/3';
 
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
-const API_OPTIONS = {
-  method: 'GET',
-  headers: {
-    accept: 'application/json',
-    Authorization: `Bearer ${API_KEY}`
-  }
-}
 
 function App() {
   const [searchMovie, setSearchMovie] = useState('');
@@ -24,48 +16,34 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [trendingMovies, setTrendingMovies] = useState([]);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [isMovieDetailsOpen, setIsMovieDetailsOpen] = useState(false);
 
   useDebounce(
     () => {
       setDebouncedSearchTerm(searchMovie);
     },
-    500,
+    1000,
     [searchMovie]
   );
 
-  const fetchMovies = async (query = '') => {
-
+  const handleFetchMovies = async (query = '') => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      const endpoint = query
-        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
-      const response = await fetch(endpoint, API_OPTIONS);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(data);
-
+      const data = await fetchMovies(query);
       if (!data.results || data.results.length === 0) {
         setErrorMessage("No movies found.");
         setMovieList([]);
         return;
       }
       setMovieList(data?.results || []);
-
       if (query && data.results.length > 0)
         updateSearchCount(query, data.results[0]);
-    }
-
-    catch (error) {
+    } catch (error) {
       console.error("Error fetching movies:", error);
       setErrorMessage("Failed to fetch movies. Please try again later.");
-    }
-    finally {
+    } finally {
       setIsLoading(false);
     }
   };
@@ -76,12 +54,32 @@ function App() {
       setTrendingMovies(movies);
     } catch (error) {
       console.error("Error fetching trending movies:", error);
-      // setErrorMessage("Failed to fetch trending movies. Please try again later.");  
     }
-  }
+  };
+
+  const handleMovieClick = async (movie) => {
+    // Show modal immediately with basic info
+    setSelectedMovie(movie);
+    setIsMovieDetailsOpen(true);
+
+    // Fetch extra details in background
+    try {
+      const detailedMovie = await fetchMovieDetails(movie.id);
+      if (detailedMovie) {
+        setSelectedMovie(detailedMovie); // Update modal with full details
+      }
+    } catch (error) {
+      console.error("Error fetching movie details:", error);
+    }
+  };
+
+  const closeMovieDetails = () => {
+    setIsMovieDetailsOpen(false);
+    setSelectedMovie(null);
+  };
 
   useEffect(() => {
-    fetchMovies(debouncedSearchTerm);
+    handleFetchMovies(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
 
   useEffect(() => {
@@ -122,7 +120,7 @@ function App() {
           ) : (
             <ul>
               {movieList.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard key={movie.id} movie={movie} onClick={() => handleMovieClick(movie)} />
               ))}
             </ul>
           )
@@ -130,6 +128,13 @@ function App() {
 
         </section>
       </div>
+
+      {/* Movie Details Modal */}
+      <MovieDetails
+        movie={selectedMovie}
+        isOpen={isMovieDetailsOpen}
+        onClose={closeMovieDetails}
+      />
     </div>
   );
 }

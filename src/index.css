@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
 
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap");
 
@@ -103,7 +104,11 @@
   }
 
   .movie-card {
-    @apply bg-dark-100 p-5 rounded-2xl shadow-inner shadow-light-100/10;
+    @apply bg-dark-100 p-5 rounded-2xl shadow-inner shadow-light-100/10 cursor-pointer transition-all duration-200;
+
+    &:hover {
+      @apply shadow-light-100/20 transform scale-105;
+    }
 
     & img {
       @apply rounded-lg h-auto w-full;
@@ -160,4 +165,8 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+body, html, #root {
+  font-family: 'Inter', Arial, sans-serif;
 }
